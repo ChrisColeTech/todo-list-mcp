@@ -39,25 +39,30 @@ This MCP server provides 14 comprehensive tools. Each tool example shows the exa
 
 | Tool | Purpose | Parameters |
 |------|---------|------------|
-| [`create-todo`](#1-create-todo---create-a-new-todo-with-auto-assigned-task-number) | Create individual task | `title`, `description` |
-| [`get-todo`](#2-get-todo---get-a-specific-todo-by-id) | Get task by ID | `id` |
-| [`update-todo`](#3-update-todo---update-a-todos-title-or-description) | Update task content | `id`, `title?`, `description?` |
-| [`complete-todo`](#4-complete-todo---mark-a-todo-as-completed) | Mark task done | `id` |
-| [`delete-todo`](#5-delete-todo---delete-a-todo) | Delete task | `id` |
-| [`update-status`](#6-update-status---update-a-todos-status) | Change task status | `id`, `status` |
-| [`bulk-add-todos`](#7-bulk-add-todos---create-multiple-tasks-from-folder-contents) | Create tasks from folder | `folderPath`, `template?`, `templateFilePath?` |
-| [`clear-all-todos`](#8-clear-all-todos---delete-all-todos-from-the-database) | Delete all tasks | none |
-| [`get-next-todo`](#9-get-next-todo---get-the-next-task-to-work-on) | Get next task | none |
-| [`list-todos`](#10-list-todos---list-all-todos-with-task-numbers) | List all tasks | none |
-| [`list-active-todos`](#11-list-active-todos---list-all-non-completed-todos) | List incomplete tasks | none |
-| [`search-todos-by-title`](#12-search-todos-by-title---search-todos-by-title) | Search by title | `title` |
-| [`search-todos-by-date`](#13-search-todos-by-date---search-todos-by-creation-date) | Search by date | `date` |
-| [`summarize-active-todos`](#14-summarize-active-todos---generate-summary-of-active-todos) | Summarize active tasks | none |
+| [`create-todo`](#1-create-todo---create-a-new-todo-with-auto-assigned-task-number) | Create single task with auto-assigned task number | `title` (string, required, min 1 char), `description` (string, required, min 1 char) |
+| [`get-todo`](#2-get-todo---get-a-specific-todo-by-id) | Retrieve specific task details by UUID | `id` (UUID string, required, must be valid UUID format) |
+| [`update-todo`](#3-update-todo---update-a-todos-title-or-description) | Modify existing task title/description | `id` (UUID, required), `title?` (string, optional, min 1 char), `description?` (string, optional, min 1 char) - **at least one of title/description required** |
+| [`complete-todo`](#4-complete-todo---mark-a-todo-as-completed) | Mark task as done with timestamp | `id` (UUID string, required, must exist in database) |
+| [`delete-todo`](#5-delete-todo---delete-a-todo) | Permanently remove task from database | `id` (UUID string, required, must exist in database) |
+| [`update-status`](#6-update-status---update-a-todos-status) | Change task status to 'New' or 'Done' | `id` (UUID, required), `status` (enum, required, must be exactly 'New' or 'Done') |
+| [`bulk-add-todos`](#7-bulk-add-todos---create-multiple-tasks-from-folder-contents) | Scan folder and create task per file with template | `folderPath` (absolute path, required, must exist), **EITHER** `template` (string, optional) **OR** `templateFilePath` (absolute path, optional, must exist) - **exactly one template method required** |
+| [`clear-all-todos`](#8-clear-all-todos---delete-all-todos-from-the-database) | Delete entire task database (irreversible) | none |
+| [`get-next-todo`](#9-get-next-todo---get-the-next-task-to-work-on) | Get lowest numbered incomplete task | none |
+| [`list-todos`](#10-list-todos---list-all-todos-with-task-numbers) | Show all tasks including completed ones | none |
+| [`list-active-todos`](#11-list-active-todos---list-all-non-completed-todos) | Show only incomplete/pending tasks | none |
+| [`search-todos-by-title`](#12-search-todos-by-title---search-todos-by-title) | Find tasks by partial title match (case-insensitive) | `title` (string, required, min 1 char, partial matching supported) |
+| [`search-todos-by-date`](#13-search-todos-by-date---search-todos-by-creation-date) | Find tasks created on specific date | `date` (string, required, must match YYYY-MM-DD format exactly) |
+| [`summarize-active-todos`](#14-summarize-active-todos---generate-summary-of-active-todos) | Generate markdown overview of incomplete tasks | none |
+
+**⚠️ Important Parameter Constraints:**
+- **bulk-add-todos**: You must provide **EITHER** `template` (inline text) **OR** `templateFilePath` (path to file), but **NEVER BOTH**. The tool will error if you provide both or neither.
+- **update-todo**: At least one of `title` or `description` must be provided (cannot update with no changes).
+- **All file paths**: Must be absolute paths (starting with `/` on Unix or `C:\` on Windows), not relative paths.
 
 ### **🎯 Workflow Examples**
 
 #### **🔄 Sequential Task Processing** (Main Workflow)
-**User prompt:** *"I have a folder of task files at `/project/tasks` and want to work through them one by one. Create tasks for all files using my standard template, then help me work through them in order."*
+**User prompt:** *"I have a folder of task files at `/project/tasks` and want to work through them one by one. Use the bulk-add-todos tool to create tasks for all files with this template: 'Review and process this file according to project requirements. Check for completeness and accuracy.' Then use get-next-todo to help me work through them in order."*
 
 Process tasks in numbered order with bulk creation:
 1. [`bulk-add-todos`](#7-bulk-add-todos---create-multiple-tasks-from-folder-contents) → Create tasks from folder
@@ -67,7 +72,7 @@ Process tasks in numbered order with bulk creation:
 5. Repeat steps 3-4 until all done
 
 #### **📝 Individual Task Management**
-**User prompt:** *"I need to create a task to fix the payment gateway bug. Add detailed steps for debugging, then help me update it as I work and mark it complete when done."*
+**User prompt:** *"Use create-todo to create a task titled 'Fix payment gateway bug' with description 'Investigate login failures in OAuth flow. Check JWT validation and redirect URLs. Test with multiple providers.' Then help me update it with update-todo if needed and use complete-todo when done."*
 
 Create and manage single tasks:
 1. [`create-todo`](#1-create-todo---create-a-new-todo-with-auto-assigned-task-number) → Create single task
@@ -75,7 +80,7 @@ Create and manage single tasks:
 3. [`complete-todo`](#4-complete-todo---mark-a-todo-as-completed) → Mark done
 
 #### **🔍 Task Discovery & Management**
-**User prompt:** *"I lost track of my work. Show me what tasks are still pending, help me find anything related to 'authentication', and give me a quick overview of my active work."*
+**User prompt:** *"Use list-active-todos to show me what tasks are still pending, then search-todos-by-title with 'authentication' to find anything related to auth, and finally summarize-active-todos to give me a quick overview."*
 
 Find and organize existing tasks:
 - [`list-active-todos`](#11-list-active-todos---list-all-non-completed-todos) → See what's pending
@@ -83,7 +88,7 @@ Find and organize existing tasks:
 - [`summarize-active-todos`](#14-summarize-active-todos---generate-summary-of-active-todos) → Get overview
 
 #### **🏗️ Project Setup Workflow**
-**User prompt:** *"I'm starting a new project and want to clean slate. Clear all my old tasks, then create new ones from my project files in `/new-project/src`, show me what got created, and tell me where to start."*
+**User prompt:** *"Use clear-all-todos to start fresh, then bulk-add-todos with folderPath '/new-project/src' and template 'Implement and test this module according to project specifications', then list-todos to see what got created, and finally get-next-todo to start work."*
 
 Setting up a new project with tasks:
 1. [`clear-all-todos`](#8-clear-all-todos---delete-all-todos-from-the-database) → Start fresh
@@ -92,7 +97,7 @@ Setting up a new project with tasks:
 4. [`get-next-todo`](#9-get-next-todo---get-the-next-task-to-work-on) → Begin work
 
 #### **📊 Progress Tracking Workflow**
-**User prompt:** *"I need a status update on my project. Show me a summary of active work, what tasks I created today, what's still pending, and what I should work on next."*
+**User prompt:** *"Use summarize-active-todos to get current status, then search-todos-by-date with '2024-01-15' (today's date) to see what I created today, then list-active-todos to check remaining work, and finally get-next-todo to see what to work on next."*
 
 Monitor project progress:
 1. [`summarize-active-todos`](#14-summarize-active-todos---generate-summary-of-active-todos) → Get current status
@@ -101,7 +106,7 @@ Monitor project progress:
 4. [`get-next-todo`](#9-get-next-todo---get-the-next-task-to-work-on) → Continue working
 
 #### **🔧 Task Maintenance Workflow**
-**User prompt:** *"I need to update my tasks. Find all tasks related to 'database', let me review the migration task specifically, update it with new requirements, and change its status to reflect current progress."*
+**User prompt:** *"Use search-todos-by-title with 'database' to find related tasks, then get-todo with the specific task ID to review details, then update-todo with the same ID to add new requirements, and finally update-status with the ID and status 'Done' if completed."*
 
 Updating and organizing tasks:
 1. [`search-todos-by-title`](#12-search-todos-by-title---search-todos-by-title) → Find outdated tasks
@@ -110,7 +115,7 @@ Updating and organizing tasks:
 4. [`update-status`](#6-update-status---update-a-todos-status) → Adjust status if needed
 
 #### **🎯 Daily Work Routine**
-**User prompt:** *"Starting my workday. Give me a quick overview of my active tasks, tell me what to work on first, and help me track progress as I complete things. At the end, show me what's left for tomorrow."*
+**User prompt:** *"Use summarize-active-todos for morning overview, then get-next-todo to see what to work on first. After completing work, use complete-todo with the task ID, then get-next-todo again to continue. At day's end, use list-active-todos to see what's left for tomorrow."*
 
 Typical daily workflow:
 1. [`summarize-active-todos`](#14-summarize-active-todos---generate-summary-of-active-todos) → Morning overview
@@ -123,7 +128,7 @@ Typical daily workflow:
 ## **🚀 Advanced Use Cases**
 
 ### **Code Review Workflow**
-**User prompt:** *"I need to review all the files in this pull request. Create tasks for each changed file in `/path/to/changed/files` with a consistent code review checklist."*
+**User prompt:** *"Use bulk-add-todos with folderPath '/path/to/changed/files' and template 'Review this file: 1. Check code quality and style 2. Verify logic and algorithms 3. Test edge cases 4. Check for security issues 5. Verify documentation' to create review tasks for each changed file."*
 
 **What it does:** Systematically review every changed file in a pull request with consistent quality checks.
 
@@ -154,7 +159,7 @@ Typical daily workflow:
 ```
 
 ### **Documentation Sprint**
-**User prompt:** *"I need to document all the modules in `/project/src/modules`. Create a task for each module using my documentation template file so I can work through them systematically."*
+**User prompt:** *"Use bulk-add-todos with folderPath '/project/src/modules' and templateFilePath '/templates/docs-template.md' to create documentation tasks for each module so I can work through them systematically."*
 
 **What it does:** Create comprehensive documentation for all modules in a codebase during focused sprint sessions.
 
@@ -176,7 +181,7 @@ Typical daily workflow:
 ```
 
 ### **Bug Triage Workflow**
-**User prompt:** *"I have a critical iOS login crash that needs immediate attention. Create a structured task with debugging steps, then help me prioritize it above other tasks."*
+**User prompt:** *"Use create-todo with title 'Fix critical iOS login crash' and description 'Priority: High - Reproduce crash, analyze logs, identify root cause, implement fix, test on multiple iOS versions' to create a structured debugging task."*
 
 **What it does:** Organize and prioritize bug fixes with structured investigation and resolution steps.
 
@@ -206,7 +211,7 @@ Typical daily workflow:
 ```
 
 ### **Feature Development Pipeline**
-**User prompt:** *"I'm building a user authentication feature with multiple components in `/features/user-auth/components`. Create tasks for each component with the full development workflow from structure to testing."*
+**User prompt:** *"Use bulk-add-todos with folderPath '/features/user-auth/components' and template 'Implement component: 1. Create structure 2. Add TypeScript interfaces 3. Implement core logic 4. Add error handling 5. Write unit tests 6. Add integration tests 7. Update documentation' to break down the feature development."*
 
 **What it does:** Break down complex features into component-level tasks with complete development lifecycle.
 
@@ -235,7 +240,7 @@ Typical daily workflow:
 ```
 
 ### **Learning/Training Workflow**
-**User prompt:** *"I want to learn React systematically. I have a folder of tutorials at `/learning/react-tutorials` and need tasks for each tutorial with proper learning steps."*
+**User prompt:** *"Use bulk-add-todos with folderPath '/learning/react-tutorials' and template 'Complete tutorial: 1. Read through completely 2. Follow along with examples 3. Complete all exercises 4. Build practice project 5. Take notes on key concepts 6. Research related topics' to create systematic learning tasks."*
 
 **What it does:** Create structured learning paths with systematic progression through educational materials.
 
@@ -260,7 +265,7 @@ Typical daily workflow:
 ```
 
 ### **Content Creation Pipeline**
-**User prompt:** *"I'm writing a blog series about microservices. I have all my topics planned in `/content/blog-series` and need tasks for each post with the complete writing and publishing workflow."*
+**User prompt:** *"Use bulk-add-todos with folderPath '/content/blog-series' and template 'Write blog post: 1. Research topic thoroughly 2. Create detailed outline 3. Write first draft 4. Add code examples/screenshots 5. Review and edit 6. Proofread 7. Publish and promote' to manage the content series creation."*
 
 **What it does:** Manage content series creation with consistent quality and publication workflow.
 
