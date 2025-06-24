@@ -57,6 +57,8 @@ This MCP server provides 14 comprehensive tools. Each tool example shows the exa
 ### **🎯 Workflow Examples**
 
 #### **🔄 Sequential Task Processing** (Main Workflow)
+**User prompt:** *"I have a folder of task files at `/project/tasks` and want to work through them one by one. Create tasks for all files using my standard template, then help me work through them in order."*
+
 Process tasks in numbered order with bulk creation:
 1. [`bulk-add-todos`](#7-bulk-add-todos---create-multiple-tasks-from-folder-contents) → Create tasks from folder
 2. [`get-next-todo`](#9-get-next-todo---get-the-next-task-to-work-on) → Get Task 1
@@ -65,18 +67,24 @@ Process tasks in numbered order with bulk creation:
 5. Repeat steps 3-4 until all done
 
 #### **📝 Individual Task Management**
+**User prompt:** *"I need to create a task to fix the payment gateway bug. Add detailed steps for debugging, then help me update it as I work and mark it complete when done."*
+
 Create and manage single tasks:
 1. [`create-todo`](#1-create-todo---create-a-new-todo-with-auto-assigned-task-number) → Create single task
 2. [`update-todo`](#3-update-todo---update-a-todos-title-or-description) → Modify if needed
 3. [`complete-todo`](#4-complete-todo---mark-a-todo-as-completed) → Mark done
 
 #### **🔍 Task Discovery & Management**
+**User prompt:** *"I lost track of my work. Show me what tasks are still pending, help me find anything related to 'authentication', and give me a quick overview of my active work."*
+
 Find and organize existing tasks:
 - [`list-active-todos`](#11-list-active-todos---list-all-non-completed-todos) → See what's pending
 - [`search-todos-by-title`](#12-search-todos-by-title---search-todos-by-title) → Find specific tasks
 - [`summarize-active-todos`](#14-summarize-active-todos---generate-summary-of-active-todos) → Get overview
 
 #### **🏗️ Project Setup Workflow**
+**User prompt:** *"I'm starting a new project and want to clean slate. Clear all my old tasks, then create new ones from my project files in `/new-project/src`, show me what got created, and tell me where to start."*
+
 Setting up a new project with tasks:
 1. [`clear-all-todos`](#8-clear-all-todos---delete-all-todos-from-the-database) → Start fresh
 2. [`bulk-add-todos`](#7-bulk-add-todos---create-multiple-tasks-from-folder-contents) → Create from project files
@@ -84,6 +92,8 @@ Setting up a new project with tasks:
 4. [`get-next-todo`](#9-get-next-todo---get-the-next-task-to-work-on) → Begin work
 
 #### **📊 Progress Tracking Workflow**
+**User prompt:** *"I need a status update on my project. Show me a summary of active work, what tasks I created today, what's still pending, and what I should work on next."*
+
 Monitor project progress:
 1. [`summarize-active-todos`](#14-summarize-active-todos---generate-summary-of-active-todos) → Get current status
 2. [`search-todos-by-date`](#13-search-todos-by-date---search-todos-by-creation-date) → See today's tasks
@@ -91,6 +101,8 @@ Monitor project progress:
 4. [`get-next-todo`](#9-get-next-todo---get-the-next-task-to-work-on) → Continue working
 
 #### **🔧 Task Maintenance Workflow**
+**User prompt:** *"I need to update my tasks. Find all tasks related to 'database', let me review the migration task specifically, update it with new requirements, and change its status to reflect current progress."*
+
 Updating and organizing tasks:
 1. [`search-todos-by-title`](#12-search-todos-by-title---search-todos-by-title) → Find outdated tasks
 2. [`get-todo`](#2-get-todo---get-a-specific-todo-by-id) → Review specific task
@@ -98,6 +110,8 @@ Updating and organizing tasks:
 4. [`update-status`](#6-update-status---update-a-todos-status) → Adjust status if needed
 
 #### **🎯 Daily Work Routine**
+**User prompt:** *"Starting my workday. Give me a quick overview of my active tasks, tell me what to work on first, and help me track progress as I complete things. At the end, show me what's left for tomorrow."*
+
 Typical daily workflow:
 1. [`summarize-active-todos`](#14-summarize-active-todos---generate-summary-of-active-todos) → Morning overview
 2. [`get-next-todo`](#9-get-next-todo---get-the-next-task-to-work-on) → Get today's task
@@ -109,6 +123,8 @@ Typical daily workflow:
 ## **🚀 Advanced Use Cases**
 
 ### **Code Review Workflow**
+**User prompt:** *"I need to review all the files in this pull request. Create tasks for each changed file in `/path/to/changed/files` with a consistent code review checklist."*
+
 **What it does:** Systematically review every changed file in a pull request with consistent quality checks.
 
 **How our MCP makes it better:**
@@ -138,6 +154,8 @@ Typical daily workflow:
 ```
 
 ### **Documentation Sprint**
+**User prompt:** *"I need to document all the modules in `/project/src/modules`. Create a task for each module using my documentation template file so I can work through them systematically."*
+
 **What it does:** Create comprehensive documentation for all modules in a codebase during focused sprint sessions.
 
 **How our MCP makes it better:**
@@ -158,6 +176,8 @@ Typical daily workflow:
 ```
 
 ### **Bug Triage Workflow**
+**User prompt:** *"I have a critical iOS login crash that needs immediate attention. Create a structured task with debugging steps, then help me prioritize it above other tasks."*
+
 **What it does:** Organize and prioritize bug fixes with structured investigation and resolution steps.
 
 **How our MCP makes it better:**
@@ -186,6 +206,8 @@ Typical daily workflow:
 ```
 
 ### **Feature Development Pipeline**
+**User prompt:** *"I'm building a user authentication feature with multiple components in `/features/user-auth/components`. Create tasks for each component with the full development workflow from structure to testing."*
+
 **What it does:** Break down complex features into component-level tasks with complete development lifecycle.
 
 **How our MCP makes it better:**
@@ -213,6 +235,8 @@ Typical daily workflow:
 ```
 
 ### **Learning/Training Workflow**
+**User prompt:** *"I want to learn React systematically. I have a folder of tutorials at `/learning/react-tutorials` and need tasks for each tutorial with proper learning steps."*
+
 **What it does:** Create structured learning paths with systematic progression through educational materials.
 
 **How our MCP makes it better:**
@@ -236,6 +260,8 @@ Typical daily workflow:
 ```
 
 ### **Content Creation Pipeline**
+**User prompt:** *"I'm writing a blog series about microservices. I have all my topics planned in `/content/blog-series` and need tasks for each post with the complete writing and publishing workflow."*
+
 **What it does:** Manage content series creation with consistent quality and publication workflow.
 
 **How our MCP makes it better:**
