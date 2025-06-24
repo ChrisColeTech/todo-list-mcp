@@ -28,7 +28,9 @@ import {
   CompleteTodoSchema,
   DeleteTodoSchema,
   SearchTodosByTitleSchema,
-  SearchTodosByDateSchema
+  SearchTodosByDateSchema,
+  BulkAddTodosSchema,
+  UpdateStatusSchema
 } from "./models/Todo.js";
 
 // Import services
@@ -423,6 +425,135 @@ server.tool(
     }
 
     return createSuccessResponse(result);
+  }
+);
+
+/**
+ * Tool 11: Bulk add todos with auto-injected fields from folder
+ * 
+ * This tool:
+ * 1. Takes a folder path and recursively scans for all files
+ * 2. Creates one todo per file with auto-injected task information
+ * 3. Auto-injects: Task number header, file path, and completion instructions
+ * 4. Template can be provided inline or read from a file
+ */
+server.tool(
+  "bulk-add-todos",
+  "Create multiple todos from all files in a folder with auto-injected task info. Template can be inline or from file.",
+  {
+    folderPath: z.string().min(1, "Folder path is required"),
+    template: z.string().optional(),
+    templateFilePath: z.string().optional(),
+  },
+  async ({ folderPath, template, templateFilePath }) => {
+    const result = await safeExecute(() => {
+      const validatedData = BulkAddTodosSchema.parse({ folderPath, template, templateFilePath });
+      const createdTodos = todoService.bulkAddTodos(validatedData);
+      const formattedList = formatTodoList(createdTodos);
+      
+      return {
+        formattedList,
+        todoCount: createdTodos.length
+      };
+    }, "Failed to bulk add todos");
+
+    if (result instanceof Error) {
+      return createErrorResponse(result.message);
+    }
+
+    const { formattedList, todoCount } = result;
+    return createSuccessResponse(`✅ Created ${todoCount} todos from folder:\n\n${formattedList}`);
+  }
+);
+
+/**
+ * Tool 12: Update todo status
+ * 
+ * This tool:
+ * 1. Updates the status of a todo to 'New' or 'Done'
+ * 2. Returns the updated todo
+ */
+server.tool(
+  "update-status",
+  "Update the status of a todo ('New' or 'Done')",
+  {
+    id: z.string().uuid("Invalid Todo ID"),
+    status: z.enum(['New', 'Done'], {
+      errorMap: () => ({ message: "Status must be 'New' or 'Done'" })
+    }),
+  },
+  async ({ id, status }) => {
+    const result = await safeExecute(() => {
+      const validatedData = UpdateStatusSchema.parse({ id, status });
+      const updatedTodo = todoService.updateStatus(validatedData);
+      
+      if (!updatedTodo) {
+        throw new Error(`Todo with ID ${id} not found`);
+      }
+
+      return formatTodo(updatedTodo);
+    }, "Failed to update todo status");
+
+    if (result instanceof Error) {
+      return createErrorResponse(result.message);
+    }
+
+    return createSuccessResponse(`✅ Todo Status Updated:\n\n${result}`);
+  }
+);
+
+/**
+ * Tool 13: Get next todo
+ * 
+ * This tool:
+ * 1. Returns the next todo that is not marked as 'Done'
+ * 2. Orders by task number (lowest first)
+ */
+server.tool(
+  "get-next-todo",
+  "Get the next todo that needs to be completed (status != 'Done')",
+  {},
+  async () => {
+    const result = await safeExecute(() => {
+      const nextTodo = todoService.getNextTodo();
+      
+      if (!nextTodo) {
+        return "No todos found that need to be completed.";
+      }
+
+      return formatTodo(nextTodo);
+    }, "Failed to get next todo");
+
+    if (result instanceof Error) {
+      return createErrorResponse(result.message);
+    }
+
+    return createSuccessResponse(result);
+  }
+);
+
+/**
+ * Tool 14: Clear all todos
+ * 
+ * This tool:
+ * 1. Deletes all todos from the database
+ * 2. Returns the number of todos deleted
+ */
+server.tool(
+  "clear-all-todos",
+  "Delete all todos from the database",
+  {},
+  async () => {
+    const result = await safeExecute(() => {
+      const deletedCount = todoService.clearAllTodos();
+      return deletedCount;
+    }, "Failed to clear all todos");
+
+    if (result instanceof Error) {
+      return createErrorResponse(result.message);
+    }
+
+    return createSuccessResponse(`✅ Cleared ${result} todos from the database.`);
   }
 );
 

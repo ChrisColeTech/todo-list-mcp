@@ -1,6 +1,6 @@
 # Todo List MCP Server
 
-A Model Context Protocol (MCP) server that provides a comprehensive API for managing todo items.
+A comprehensive Model Context Protocol (MCP) server that provides advanced todo management with bulk operations, task sequencing, and smart validation.
 
 <a href="https://glama.ai/mcp/servers/kh39rjpplx">
   <img width="380" height="200" src="https://glama.ai/mcp/servers/kh39rjpplx/badge" alt="Todo List Server MCP server" />
@@ -10,27 +10,461 @@ A Model Context Protocol (MCP) server that provides a comprehensive API for mana
 
 ## Features
 
-- **Create todos**: Add new tasks with title and markdown description
-- **Update todos**: Modify existing tasks
-- **Complete todos**: Mark tasks as done
+### **Core Todo Management**
+- **Create todos**: Add individual tasks with auto-assigned task numbers
+- **Update todos**: Modify existing tasks while preserving task numbers
+- **Complete todos**: Mark tasks as done with completion timestamps
 - **Delete todos**: Remove tasks from the list
 - **Search todos**: Find tasks by title or creation date
-- **Summarize todos**: Get a quick overview of active tasks
+- **Summarize todos**: Get quick overviews of active tasks
 
-## Tools
+### **Bulk Operations & Workflow**
+- **Bulk task creation**: Create multiple tasks from folder contents
+- **Template system**: Use inline templates or template files with auto-injection
+- **Sequential workflow**: Get next task in numbered sequence
+- **Task numbering**: All tasks get sequential numbers for predictable ordering
+- **Status management**: Track tasks as 'New' or 'Done'
 
-This MCP server exposes the following tools:
+### **Smart Validation**
+- **Duplicate prevention**: Automatically detects and prevents duplicate tasks
+- **File validation**: Ensures task files exist and templates are readable
+- **Path management**: Associates tasks with specific file paths
+- **Error handling**: Clear error messages and validation feedback
 
-1. `create-todo`: Create a new todo item
-2. `list-todos`: List all todos
-3. `get-todo`: Get a specific todo by ID
-4. `update-todo`: Update a todo's title or description
-5. `complete-todo`: Mark a todo as completed
-6. `delete-todo`: Delete a todo
-7. `search-todos-by-title`: Search todos by title (case-insensitive partial match)
-8. `search-todos-by-date`: Search todos by creation date (format: YYYY-MM-DD)
-9. `list-active-todos`: List all non-completed todos
-10. `summarize-active-todos`: Generate a summary of all active (non-completed) todos
+## Tools Reference
+
+This MCP server provides 14 comprehensive tools. Each tool example shows the exact format for LLM usage:
+
+### **📋 Quick Reference Index**
+
+| Tool | Purpose | Parameters |
+|------|---------|------------|
+| [`create-todo`](#1-create-todo---create-a-new-todo-with-auto-assigned-task-number) | Create individual task | `title`, `description` |
+| [`get-todo`](#2-get-todo---get-a-specific-todo-by-id) | Get task by ID | `id` |
+| [`update-todo`](#3-update-todo---update-a-todos-title-or-description) | Update task content | `id`, `title?`, `description?` |
+| [`complete-todo`](#4-complete-todo---mark-a-todo-as-completed) | Mark task done | `id` |
+| [`delete-todo`](#5-delete-todo---delete-a-todo) | Delete task | `id` |
+| [`update-status`](#6-update-status---update-a-todos-status) | Change task status | `id`, `status` |
+| [`bulk-add-todos`](#7-bulk-add-todos---create-multiple-tasks-from-folder-contents) | Create tasks from folder | `folderPath`, `template?`, `templateFilePath?` |
+| [`clear-all-todos`](#8-clear-all-todos---delete-all-todos-from-the-database) | Delete all tasks | none |
+| [`get-next-todo`](#9-get-next-todo---get-the-next-task-to-work-on) | Get next task | none |
+| [`list-todos`](#10-list-todos---list-all-todos-with-task-numbers) | List all tasks | none |
+| [`list-active-todos`](#11-list-active-todos---list-all-non-completed-todos) | List incomplete tasks | none |
+| [`search-todos-by-title`](#12-search-todos-by-title---search-todos-by-title) | Search by title | `title` |
+| [`search-todos-by-date`](#13-search-todos-by-date---search-todos-by-creation-date) | Search by date | `date` |
+| [`summarize-active-todos`](#14-summarize-active-todos---generate-summary-of-active-todos) | Summarize active tasks | none |
+
+### **🎯 Workflow Examples**
+
+#### **🔄 Sequential Task Processing** (Main Workflow)
+Process tasks in numbered order with bulk creation:
+1. [`bulk-add-todos`](#7-bulk-add-todos---create-multiple-tasks-from-folder-contents) → Create tasks from folder
+2. [`get-next-todo`](#9-get-next-todo---get-the-next-task-to-work-on) → Get Task 1
+3. [`complete-todo`](#4-complete-todo---mark-a-todo-as-completed) → Mark Task 1 done
+4. [`get-next-todo`](#9-get-next-todo---get-the-next-task-to-work-on) → Get Task 2
+5. Repeat steps 3-4 until all done
+
+#### **📝 Individual Task Management**
+Create and manage single tasks:
+1. [`create-todo`](#1-create-todo---create-a-new-todo-with-auto-assigned-task-number) → Create single task
+2. [`update-todo`](#3-update-todo---update-a-todos-title-or-description) → Modify if needed
+3. [`complete-todo`](#4-complete-todo---mark-a-todo-as-completed) → Mark done
+
+#### **🔍 Task Discovery & Management**
+Find and organize existing tasks:
+- [`list-active-todos`](#11-list-active-todos---list-all-non-completed-todos) → See what's pending
+- [`search-todos-by-title`](#12-search-todos-by-title---search-todos-by-title) → Find specific tasks
+- [`summarize-active-todos`](#14-summarize-active-todos---generate-summary-of-active-todos) → Get overview
+
+#### **🏗️ Project Setup Workflow**
+Setting up a new project with tasks:
+1. [`clear-all-todos`](#8-clear-all-todos---delete-all-todos-from-the-database) → Start fresh
+2. [`bulk-add-todos`](#7-bulk-add-todos---create-multiple-tasks-from-folder-contents) → Create from project files
+3. [`list-todos`](#10-list-todos---list-all-todos-with-task-numbers) → Review created tasks
+4. [`get-next-todo`](#9-get-next-todo---get-the-next-task-to-work-on) → Begin work
+
+#### **📊 Progress Tracking Workflow**
+Monitor project progress:
+1. [`summarize-active-todos`](#14-summarize-active-todos---generate-summary-of-active-todos) → Get current status
+2. [`search-todos-by-date`](#13-search-todos-by-date---search-todos-by-creation-date) → See today's tasks
+3. [`list-active-todos`](#11-list-active-todos---list-all-non-completed-todos) → Check remaining work
+4. [`get-next-todo`](#9-get-next-todo---get-the-next-task-to-work-on) → Continue working
+
+#### **🔧 Task Maintenance Workflow**
+Updating and organizing tasks:
+1. [`search-todos-by-title`](#12-search-todos-by-title---search-todos-by-title) → Find outdated tasks
+2. [`get-todo`](#2-get-todo---get-a-specific-todo-by-id) → Review specific task
+3. [`update-todo`](#3-update-todo---update-a-todos-title-or-description) → Update content
+4. [`update-status`](#6-update-status---update-a-todos-status) → Adjust status if needed
+
+#### **🎯 Daily Work Routine**
+Typical daily workflow:
+1. [`summarize-active-todos`](#14-summarize-active-todos---generate-summary-of-active-todos) → Morning overview
+2. [`get-next-todo`](#9-get-next-todo---get-the-next-task-to-work-on) → Get today's task
+3. Work on task...
+4. [`complete-todo`](#4-complete-todo---mark-a-todo-as-completed) → Mark done
+5. [`get-next-todo`](#9-get-next-todo---get-the-next-task-to-work-on) → Continue
+6. [`list-active-todos`](#11-list-active-todos---list-all-non-completed-todos) → End of day review
+
+## **🚀 Advanced Use Cases**
+
+### **Code Review Workflow**
+**What it does:** Systematically review every changed file in a pull request with consistent quality checks.
+
+**How our MCP makes it better:**
+- ✅ **No missed files**: Bulk creation ensures every file gets reviewed
+- ✅ **Consistent standards**: Template ensures same quality checks for all files
+- ✅ **Sequential processing**: Review files in order, never lose track of progress
+- ✅ **Zero setup time**: One command creates complete review workflow
+
+```xml
+<!-- Create tasks for each file in a pull request -->
+<invoke name="bulk-add-todos">
+<parameter name="folderPath">/path/to/changed/files</parameter>
+<parameter name="template">Review this file:
+1. Check code quality and style
+2. Verify logic and algorithms  
+3. Test edge cases
+4. Check for security issues
+5. Verify documentation</parameter>
+</invoke>
+
+<!-- Process each file systematically -->
+<invoke name="get-next-todo"></invoke>
+<!-- Work on review... -->
+<invoke name="complete-todo">
+<parameter name="id">file-review-id</parameter>
+</invoke>
+```
+
+### **Documentation Sprint**
+**What it does:** Create comprehensive documentation for all modules in a codebase during focused sprint sessions.
+
+**How our MCP makes it better:**
+- ✅ **Complete coverage**: Auto-discovers all modules, ensures nothing is missed
+- ✅ **Standardized docs**: Template file ensures consistent documentation format
+- ✅ **Progress visibility**: Real-time tracking of documentation completion
+- ✅ **Scalable process**: Works for 10 modules or 1000 modules equally well
+
+```xml
+<!-- Create tasks for all undocumented modules -->
+<invoke name="bulk-add-todos">
+<parameter name="folderPath">/project/src/modules</parameter>
+<parameter name="templateFilePath">/templates/documentation-task.md</parameter>
+</invoke>
+
+<!-- Track progress -->
+<invoke name="summarize-active-todos"></invoke>
+```
+
+### **Bug Triage Workflow**
+**What it does:** Organize and prioritize bug fixes with structured investigation and resolution steps.
+
+**How our MCP makes it better:**
+- ✅ **Structured debugging**: Template ensures thorough investigation process
+- ✅ **Priority management**: Easy re-prioritization with visual indicators
+- ✅ **Task sequencing**: Auto-numbered tasks create natural priority queue
+- ✅ **Progress tracking**: Clear visibility into which bugs are being worked on
+
+```xml
+<!-- Create individual tasks for each bug -->
+<invoke name="create-todo">
+<parameter name="title">Fix login crash on iOS</parameter>
+<parameter name="description">**Priority: High**
+- Reproduce the crash
+- Analyze crash logs
+- Identify root cause
+- Implement fix
+- Test on multiple iOS versions</parameter>
+</invoke>
+
+<!-- Prioritize by updating critical bugs -->
+<invoke name="update-todo">
+<parameter name="id">bug-id</parameter>
+<parameter name="title">🚨 CRITICAL: Fix login crash on iOS</parameter>
+</invoke>
+```
+
+### **Feature Development Pipeline**
+**What it does:** Break down complex features into component-level tasks with complete development lifecycle.
+
+**How our MCP makes it better:**
+- ✅ **Complete decomposition**: Every component gets full development workflow
+- ✅ **Nothing forgotten**: Template ensures testing and docs aren't skipped
+- ✅ **Parallel-ready**: Multiple developers can work on different components
+- ✅ **Quality gates**: Built-in checkpoints for testing and documentation
+
+```xml
+<!-- Break down feature into tasks -->
+<invoke name="bulk-add-todos">
+<parameter name="folderPath">/features/user-auth/components</parameter>
+<parameter name="template">Implement component:
+1. Create component structure
+2. Add TypeScript interfaces
+3. Implement core logic
+4. Add error handling
+5. Write unit tests
+6. Add integration tests
+7. Update documentation</parameter>
+</invoke>
+
+<!-- Process in order -->
+<invoke name="get-next-todo"></invoke>
+```
+
+### **Learning/Training Workflow**
+**What it does:** Create structured learning paths with systematic progression through educational materials.
+
+**How our MCP makes it better:**
+- ✅ **Systematic learning**: Each tutorial gets complete learning workflow
+- ✅ **No skipped lessons**: Bulk creation ensures all materials are covered
+- ✅ **Progressive mastery**: Sequential completion builds knowledge systematically
+- ✅ **Accountability**: Clear tracking of learning progress and completion
+
+```xml
+<!-- Create learning path -->
+<invoke name="bulk-add-todos">
+<parameter name="folderPath">/learning/react-tutorials</parameter>
+<parameter name="template">Complete tutorial:
+1. Read through the tutorial completely
+2. Follow along with examples
+3. Complete all exercises
+4. Build the practice project
+5. Take notes on key concepts
+6. Research related topics</parameter>
+</invoke>
+```
+
+### **Content Creation Pipeline**
+**What it does:** Manage content series creation with consistent quality and publication workflow.
+
+**How our MCP makes it better:**
+- ✅ **Consistent quality**: Template ensures every post follows same quality process
+- ✅ **Series completion**: Bulk creation guarantees full series gets planned
+- ✅ **Publication pipeline**: Built-in workflow from research to promotion
+- ✅ **Content calendar**: Sequential numbering creates natural publishing order
+
+```xml
+<!-- Create tasks for blog post series -->
+<invoke name="bulk-add-todos">
+<parameter name="folderPath">/content/blog-series</parameter>
+<parameter name="template">Write blog post:
+1. Research topic thoroughly
+2. Create detailed outline
+3. Write first draft
+4. Add code examples/screenshots
+5. Review and edit
+6. Proofread
+7. Publish and promote</parameter>
+</invoke>
+```
+
+---
+
+### **Individual Task Management**
+
+#### 1. `create-todo` - Create a new todo with auto-assigned task number
+Creates a single todo item with automatic task numbering and status initialization.
+
+**Parameters:**
+- `title` (string, required): The title of the todo
+- `description` (string, required): Detailed description in markdown format
+
+**Example:**
+```xml
+<invoke name="create-todo">
+<parameter name="title">Fix authentication bug</parameter>
+<parameter name="description">Investigate and fix the login issue where users can't authenticate with OAuth providers. Check the JWT token validation logic.</parameter>
+</invoke>
+```
+
+#### 2. `get-todo` - Get a specific todo by ID
+Retrieves the full details of a specific todo item using its UUID.
+
+**Parameters:**
+- `id` (string, required): The UUID of the todo to retrieve
+
+**Example:**
+```xml
+<invoke name="get-todo">
+<parameter name="id">550e8400-e29b-41d4-a716-446655440000</parameter>
+</invoke>
+```
+
+#### 3. `update-todo` - Update a todo's title or description
+Modifies an existing todo's title and/or description while preserving other fields.
+
+**Parameters:**
+- `id` (string, required): The UUID of the todo to update
+- `title` (string, optional): New title for the todo
+- `description` (string, optional): New description for the todo
+
+**Example:**
+```xml
+<invoke name="update-todo">
+<parameter name="id">550e8400-e29b-41d4-a716-446655440000</parameter>
+<parameter name="title">Fix critical authentication bug</parameter>
+<parameter name="description">**URGENT**: Investigate and fix the login issue where users can't authenticate with OAuth providers. Check the JWT token validation logic and verify redirect URLs.</parameter>
+</invoke>
+```
+
+#### 4. `complete-todo` - Mark a todo as completed
+Marks a todo as completed by setting both the completion timestamp and status to 'Done'.
+
+**Parameters:**
+- `id` (string, required): The UUID of the todo to mark as completed
+
+**Example:**
+```xml
+<invoke name="complete-todo">
+<parameter name="id">550e8400-e29b-41d4-a716-446655440000</parameter>
+</invoke>
+```
+
+#### 5. `delete-todo` - Delete a todo
+Permanently removes a todo from the database.
+
+**Parameters:**
+- `id` (string, required): The UUID of the todo to delete
+
+**Example:**
+```xml
+<invoke name="delete-todo">
+<parameter name="id">550e8400-e29b-41d4-a716-446655440000</parameter>
+</invoke>
+```
+
+#### 6. `update-status` - Update a todo's status
+Changes the status of a todo between 'New' and 'Done' without affecting completion timestamp.
+
+**Parameters:**
+- `id` (string, required): The UUID of the todo to update
+- `status` (string, required): Either 'New' or 'Done'
+
+**Example:**
+```xml
+<invoke name="update-status">
+<parameter name="id">550e8400-e29b-41d4-a716-446655440000</parameter>
+<parameter name="status">Done</parameter>
+</invoke>
+```
+
+### **Bulk Operations**
+
+#### 7. `bulk-add-todos` - Create multiple tasks from folder contents
+Recursively scans a folder and creates one todo per file using a template with auto-injected metadata.
+
+**Parameters:**
+- `folderPath` (string, required): Absolute path to the folder to scan
+- `template` (string, optional): Inline template text with instructions
+- `templateFilePath` (string, optional): Path to a template file to read
+
+*Note: Must provide either `template` OR `templateFilePath`, not both.*
+
+**Example with inline template:**
+```xml
+<invoke name="bulk-add-todos">
+<parameter name="folderPath">/home/user/project/tasks</parameter>
+<parameter name="template">Steps:
+1. Read the task file thoroughly
+2. Execute all commands exactly as written
+3. Test the implementation
+4. Document any issues encountered</parameter>
+</invoke>
+```
+
+**Example with template file:**
+```xml
+<invoke name="bulk-add-todos">
+<parameter name="folderPath">/home/user/project/tasks</parameter>
+<parameter name="templateFilePath">/home/user/templates/default-task.md</parameter>
+</invoke>
+```
+
+#### 8. `clear-all-todos` - Delete all todos from the database
+Removes all todos from the database and returns the count of deleted items.
+
+**Parameters:** None
+
+**Example:**
+```xml
+<invoke name="clear-all-todos">
+</invoke>
+```
+
+### **Workflow & Navigation**
+
+#### 9. `get-next-todo` - Get the next task to work on
+Returns the todo with the lowest task number that has status != 'Done', providing sequential workflow progression.
+
+**Parameters:** None
+
+**Example:**
+```xml
+<invoke name="get-next-todo">
+</invoke>
+```
+
+#### 10. `list-todos` - List all todos with task numbers
+Returns all todos in the database, including completed ones, with full formatting.
+
+**Parameters:** None
+
+**Example:**
+```xml
+<invoke name="list-todos">
+</invoke>
+```
+
+#### 11. `list-active-todos` - List all non-completed todos
+Returns only todos that haven't been completed, filtered by completion status.
+
+**Parameters:** None
+
+**Example:**
+```xml
+<invoke name="list-active-todos">
+</invoke>
+```
+
+### **Search & Discovery**
+
+#### 12. `search-todos-by-title` - Search todos by title
+Performs case-insensitive partial matching on todo titles.
+
+**Parameters:**
+- `title` (string, required): Search term to look for in todo titles
+
+**Example:**
+```xml
+<invoke name="search-todos-by-title">
+<parameter name="title">authentication</parameter>
+</invoke>
+```
+
+#### 13. `search-todos-by-date` - Search todos by creation date
+Finds todos created on a specific date.
+
+**Parameters:**
+- `date` (string, required): Date in YYYY-MM-DD format
+
+**Example:**
+```xml
+<invoke name="search-todos-by-date">
+<parameter name="date">2024-01-15</parameter>
+</invoke>
+```
+
+#### 14. `summarize-active-todos` - Generate summary of active todos
+Creates a markdown-formatted summary of all incomplete todos.
+
+**Parameters:** None
+
+**Example:**
+```xml
+<invoke name="summarize-active-todos">
+</invoke>
+```
 
 ## Installation
 
@@ -82,11 +516,37 @@ Add this to your `claude_desktop_config.json`:
 
 When using with Claude for Desktop or Cursor, you can try:
 
+#### **Individual Task Management**
 - "Create a todo to learn MCP with a description explaining why MCP is useful"
-- "List all my active todos"
-- "Create a todo for tomorrow's meeting with details about the agenda in markdown"
 - "Mark my learning MCP todo as completed"
-- "Summarize all my active todos"
+- "List all my active todos"
+- "Get the next task I should work on"
+
+#### **Bulk Operations**
+- "Create tasks for all files in /path/to/my/project using this template: [your template]"
+- "Use the template file at /path/to/template.md to create tasks for /path/to/tasks folder"
+- "Clear all todos and start fresh"
+
+#### **Workflow Examples**
+- "Get my next task" (returns Task 1, 2, 3... in sequence)
+- "Complete task abc123-def4-5678" (marks as done, next call returns Task 2)
+- "Show me a summary of all my active work"
+
+#### **Template System**
+The bulk operations support powerful templating with auto-injection:
+```markdown
+Your template:
+Read the task file and complete all steps.
+Follow the instructions exactly as written.
+
+Gets auto-expanded to:
+**Task 5**
+**Task File:** /path/to/file.md
+Read the task file and complete all steps.
+Follow the instructions exactly as written.
+**When completed, use the complete-todo MCP tool:**
+- ID: abc123-def4-5678-9012-345678901234
+```
 
 ## Project Structure
 
@@ -111,6 +571,24 @@ This project is designed as an educational resource. To get the most out of it:
 3. Use the test client to see how the server works in practice
 4. Experiment with adding your own tools or extending the existing ones
 
+## Database Schema
+
+The server uses SQLite with the following schema:
+
+```sql
+CREATE TABLE todos (
+  id TEXT PRIMARY KEY,              -- UUID
+  title TEXT NOT NULL,              -- Task title
+  description TEXT NOT NULL,        -- Markdown description (with auto-injected content for bulk tasks)
+  completedAt TEXT NULL,            -- ISO timestamp when completed
+  createdAt TEXT NOT NULL,          -- ISO timestamp when created
+  updatedAt TEXT NOT NULL,          -- ISO timestamp when last updated
+  filePath TEXT NULL,               -- Associated file path (for bulk tasks)
+  status TEXT NOT NULL DEFAULT 'New', -- Task status: 'New' or 'Done'
+  taskNumber INTEGER NULL           -- Sequential task number for ordering
+);
+```
+
 ## Development
 
 ### Building
@@ -124,6 +602,42 @@ npm run build
 ```bash
 npm run dev
 ```
+
+### Testing
+
+```bash
+# Test with the included client
+npm run test
+
+# Use MCP Inspector for debugging
+npm run inspector
+```
+
+## Key Features Deep Dive
+
+### **Task Numbering System**
+- All tasks get sequential numbers (1, 2, 3...) regardless of creation method
+- `get-next-todo` returns lowest numbered incomplete task
+- Provides predictable workflow progression
+
+### **Bulk Task Creation**
+- Recursively scans folders for all files
+- Creates one task per file with auto-injected metadata
+- Prevents duplicates by checking existing file paths
+- Supports both inline templates and template files
+
+### **Smart Validation**
+- Duplicate prevention based on file paths and content
+- Template file validation (existence, readability)
+- Clear error messages with specific details
+- Graceful handling of partial failures
+
+### **Template Auto-Injection**
+Templates automatically get enhanced with:
+- Task number header
+- File path reference
+- Completion instructions with todo ID
+- Your custom instructions in the middle
 
 ## License
 

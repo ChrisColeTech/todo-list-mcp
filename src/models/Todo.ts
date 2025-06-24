@@ -32,6 +32,9 @@ export interface Todo {
   completedAt: string | null; // ISO timestamp when completed, null if not completed
   createdAt: string;
   updatedAt: string;
+  filePath?: string; // Optional file path associated with the task
+  status: 'New' | 'Done'; // Task status for bulk operations
+  taskNumber?: number; // Sequential task number for ordering
 }
 
 /**
@@ -50,6 +53,27 @@ export interface Todo {
 export const CreateTodoSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().min(1, "Description is required"),
+});
+
+// Schema for bulk adding todos with template
+export const BulkAddTodosSchema = z.object({
+  folderPath: z.string().min(1, "Folder path is required"),
+  template: z.string().optional(),
+  templateFilePath: z.string().optional(),
+}).refine(
+  (data) => data.template || data.templateFilePath,
+  {
+    message: "Either template or templateFilePath must be provided",
+    path: ["template"]
+  }
+);
+
+// Schema for updating todo status
+export const UpdateStatusSchema = z.object({
+  id: z.string().uuid("Invalid Todo ID"),
+  status: z.enum(['New', 'Done'], {
+    errorMap: () => ({ message: "Status must be 'New' or 'Done'" })
+  }),
 });
 
 // Schema for updating a todo - requires ID, title and description are optional
@@ -91,7 +115,7 @@ export const SearchTodosByDateSchema = z.object({
  * @param data The validated input data
  * @returns A fully formed Todo object with generated ID and timestamps
  */
-export function createTodo(data: z.infer<typeof CreateTodoSchema>): Todo {
+export function createTodo(data: z.infer<typeof CreateTodoSchema>, filePath?: string, taskNumber?: number): Todo {
   const now = new Date().toISOString();
   return {
     id: uuidv4(),
@@ -101,5 +125,8 @@ export function createTodo(data: z.infer<typeof CreateTodoSchema>): Todo {
     completedAt: null,
     createdAt: now,
     updatedAt: now,
+    filePath,
+    status: 'New',
+    taskNumber,
   };
 } 

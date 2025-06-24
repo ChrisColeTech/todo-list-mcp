@@ -29,12 +29,11 @@ import { Todo } from "../models/Todo.js";
  * @returns A markdown-formatted string representation
  */
 export function formatTodo(todo: Todo): string {
+  const statusEmoji = todo.completed ? '✅' : (todo.status === 'Done' ? '✅' : '⏳');
+  const taskNumberPrefix = todo.taskNumber ? `Task ${todo.taskNumber}: ` : '';
+  
   return `
-## ${todo.title} ${todo.completed ? '✅' : '⏳'}
-
-ID: ${todo.id}
-Created: ${new Date(todo.createdAt).toLocaleString()}
-Updated: ${new Date(todo.updatedAt).toLocaleString()}
+## ${taskNumberPrefix}${todo.title} ${statusEmoji}
 
 ${todo.description}
   `.trim();

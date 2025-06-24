@@ -64,9 +64,31 @@ class DatabaseService {
         description TEXT NOT NULL,
         completedAt TEXT NULL, -- ISO timestamp, NULL if not completed
         createdAt TEXT NOT NULL,
-        updatedAt TEXT NOT NULL
+        updatedAt TEXT NOT NULL,
+        filePath TEXT NULL, -- Optional file path associated with the task
+        status TEXT NOT NULL DEFAULT 'New', -- Task status: 'New' or 'Done'
+        taskNumber INTEGER NULL -- Sequential task number for ordering
       )
     `);
+
+    // Add new columns to existing table if they don't exist (for migration)
+    try {
+      this.db.exec(`ALTER TABLE todos ADD COLUMN filePath TEXT NULL`);
+    } catch (error) {
+      // Column already exists, ignore error
+    }
+    
+    try {
+      this.db.exec(`ALTER TABLE todos ADD COLUMN status TEXT NOT NULL DEFAULT 'New'`);
+    } catch (error) {
+      // Column already exists, ignore error
+    }
+    
+    try {
+      this.db.exec(`ALTER TABLE todos ADD COLUMN taskNumber INTEGER NULL`);
+    } catch (error) {
+      // Column already exists, ignore error
+    }
   }
 
   /**
