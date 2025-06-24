@@ -55,18 +55,10 @@ export const CreateTodoSchema = z.object({
   description: z.string().min(1, "Description is required"),
 });
 
-// Schema for bulk adding todos with template
+// Schema for bulk adding todos by reading file contents
 export const BulkAddTodosSchema = z.object({
   folderPath: z.string().min(1, "Folder path is required"),
-  template: z.string().optional(),
-  templateFilePath: z.string().optional(),
-}).refine(
-  (data) => data.template || data.templateFilePath,
-  {
-    message: "Either template or templateFilePath must be provided",
-    path: ["template"]
-  }
-);
+});
 
 // Schema for updating todo status
 export const UpdateStatusSchema = z.object({

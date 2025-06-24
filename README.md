@@ -33,7 +33,7 @@ A comprehensive Model Context Protocol (MCP) server that provides advanced todo 
 
 ## Tools Reference
 
-This MCP server provides 14 comprehensive tools. Each tool example shows the exact format for LLM usage:
+This MCP server provides 15 comprehensive tools. Each tool example shows the exact format for LLM usage:
 
 ### **📋 Quick Reference Index**
 
@@ -45,24 +45,25 @@ This MCP server provides 14 comprehensive tools. Each tool example shows the exa
 | [`complete-todo`](#4-complete-todo---mark-a-todo-as-completed) | Mark task as done with timestamp | `id` (UUID string, required, must exist in database) |
 | [`delete-todo`](#5-delete-todo---delete-a-todo) | Permanently remove task from database | `id` (UUID string, required, must exist in database) |
 | [`update-status`](#6-update-status---update-a-todos-status) | Change task status to 'New' or 'Done' | `id` (UUID, required), `status` (enum, required, must be exactly 'New' or 'Done') |
-| [`bulk-add-todos`](#7-bulk-add-todos---create-multiple-tasks-from-folder-contents) | Scan folder and create task per file with template | `folderPath` (absolute path, required, must exist), **EITHER** `template` (string, optional) **OR** `templateFilePath` (absolute path, optional, must exist) - **exactly one template method required** |
+| [`bulk-add-todos`](#7-bulk-add-todos---create-multiple-tasks-from-folder-contents) | Create tasks by reading file contents from folder | `folderPath` (absolute path, required, must exist) |
 | [`clear-all-todos`](#8-clear-all-todos---delete-all-todos-from-the-database) | Delete entire task database (irreversible) | none |
 | [`get-next-todo`](#9-get-next-todo---get-the-next-task-to-work-on) | Get lowest numbered incomplete task | none |
-| [`list-todos`](#10-list-todos---list-all-todos-with-task-numbers) | Show all tasks including completed ones | none |
-| [`list-active-todos`](#11-list-active-todos---list-all-non-completed-todos) | Show only incomplete/pending tasks | none |
-| [`search-todos-by-title`](#12-search-todos-by-title---search-todos-by-title) | Find tasks by partial title match (case-insensitive) | `title` (string, required, min 1 char, partial matching supported) |
-| [`search-todos-by-date`](#13-search-todos-by-date---search-todos-by-creation-date) | Find tasks created on specific date | `date` (string, required, must match YYYY-MM-DD format exactly) |
-| [`summarize-active-todos`](#14-summarize-active-todos---generate-summary-of-active-todos) | Generate markdown overview of incomplete tasks | none |
+| [`get-next-todo-number`](#10-get-next-todo-number---get-only-the-next-task-number) | Get just the task number of next incomplete task | none |
+| [`list-todos`](#11-list-todos---list-all-todos-with-task-numbers) | Show all tasks including completed ones | none |
+| [`list-active-todos`](#12-list-active-todos---list-all-non-completed-todos) | Show only incomplete/pending tasks | none |
+| [`search-todos-by-title`](#13-search-todos-by-title---search-todos-by-title) | Find tasks by partial title match (case-insensitive) | `title` (string, required, min 1 char, partial matching supported) |
+| [`search-todos-by-date`](#14-search-todos-by-date---search-todos-by-creation-date) | Find tasks created on specific date | `date` (string, required, must match YYYY-MM-DD format exactly) |
+| [`summarize-active-todos`](#15-summarize-active-todos---generate-summary-of-active-todos) | Generate markdown overview of incomplete tasks | none |
 
 **⚠️ Important Parameter Constraints:**
-- **bulk-add-todos**: You must provide **EITHER** `template` (inline text) **OR** `templateFilePath` (path to file), but **NEVER BOTH**. The tool will error if you provide both or neither.
+- **bulk-add-todos**: Simply provide a `folderPath` - the tool reads all file contents automatically.
 - **update-todo**: At least one of `title` or `description` must be provided (cannot update with no changes).
 - **All file paths**: Must be absolute paths (starting with `/` on Unix or `C:\` on Windows), not relative paths.
 
 ### **🎯 Workflow Examples**
 
 #### **🔄 Sequential Task Processing** (Main Workflow)
-**User prompt:** *"I have a folder of task files at `/project/tasks` and want to work through them one by one. Use the bulk-add-todos tool to create tasks for all files with this template: 'Review and process this file according to project requirements. Check for completeness and accuracy.' Then use get-next-todo to help me work through them in order."*
+**User prompt:** *"I have a folder of task files at `/project/tasks` and want to work through them one by one. Use the bulk-add-todos tool to create tasks for all files - each task will contain the full file content. Then use get-next-todo to help me work through them in order."*
 
 Process tasks in numbered order with bulk creation:
 1. [`bulk-add-todos`](#7-bulk-add-todos---create-multiple-tasks-from-folder-contents) → Create tasks from folder
@@ -128,13 +129,13 @@ Typical daily workflow:
 ## **🚀 Advanced Use Cases**
 
 ### **Code Review Workflow**
-**User prompt:** *"Use bulk-add-todos with folderPath '/path/to/changed/files' and template 'Review this file: 1. Check code quality and style 2. Verify logic and algorithms 3. Test edge cases 4. Check for security issues 5. Verify documentation' to create review tasks for each changed file."*
+**User prompt:** *"Use bulk-add-todos with folderPath '/path/to/changed/files' to create review tasks for each changed file. Each task will contain the complete file content for review."*
 
-**What it does:** Systematically review every changed file in a pull request with consistent quality checks.
+**What it does:** Systematically review every changed file with full file content embedded in each task.
 
 **How our MCP makes it better:**
-- ✅ **No missed files**: Bulk creation ensures every file gets reviewed
-- ✅ **Consistent standards**: Template ensures same quality checks for all files
+- ✅ **Complete context**: Full file content embedded in each review task
+- ✅ **No file switching**: Review directly from task description, no need to open files
 - ✅ **Sequential processing**: Review files in order, never lose track of progress
 - ✅ **Zero setup time**: One command creates complete review workflow
 
@@ -142,38 +143,31 @@ Typical daily workflow:
 <!-- Create tasks for each file in a pull request -->
 <invoke name="bulk-add-todos">
 <parameter name="folderPath">/path/to/changed/files</parameter>
-<parameter name="template">Review this file:
-1. Check code quality and style
-2. Verify logic and algorithms  
-3. Test edge cases
-4. Check for security issues
-5. Verify documentation</parameter>
 </invoke>
 
 <!-- Process each file systematically -->
 <invoke name="get-next-todo"></invoke>
-<!-- Work on review... -->
+<!-- Review the file content shown in the task description -->
 <invoke name="complete-todo">
 <parameter name="id">file-review-id</parameter>
 </invoke>
 ```
 
 ### **Documentation Sprint**
-**User prompt:** *"Use bulk-add-todos with folderPath '/project/src/modules' and templateFilePath '/templates/docs-template.md' to create documentation tasks for each module so I can work through them systematically."*
+**User prompt:** *"Use bulk-add-todos with folderPath '/project/src/modules' to create documentation tasks for each module. Each task will contain the current module code for reference while writing docs."*
 
-**What it does:** Create comprehensive documentation for all modules in a codebase during focused sprint sessions.
+**What it does:** Create documentation tasks with the complete module source code embedded for reference.
 
 **How our MCP makes it better:**
-- ✅ **Complete coverage**: Auto-discovers all modules, ensures nothing is missed
-- ✅ **Standardized docs**: Template file ensures consistent documentation format
+- ✅ **Complete context**: Current module code embedded in each documentation task
+- ✅ **No context switching**: See the actual code while writing documentation
 - ✅ **Progress visibility**: Real-time tracking of documentation completion
 - ✅ **Scalable process**: Works for 10 modules or 1000 modules equally well
 
 ```xml
-<!-- Create tasks for all undocumented modules -->
+<!-- Create tasks for all modules -->
 <invoke name="bulk-add-todos">
 <parameter name="folderPath">/project/src/modules</parameter>
-<parameter name="templateFilePath">/templates/documentation-task.md</parameter>
 </invoke>
 
 <!-- Track progress -->
@@ -436,7 +430,26 @@ Returns the todo with the lowest task number that has status != 'Done', providin
 </invoke>
 ```
 
-#### 10. `list-todos` - List all todos with task numbers
+#### 10. `get-next-todo-number` - Get only the next task number
+Returns just the task number of the next incomplete todo, or a completion message if all tasks are done.
+
+**Parameters:** None
+
+**Returns:** Either the task number (as a string) or "All todos have been completed"
+
+**Use case:** Perfect for quick status checks or integrating with other systems that just need the task number.
+
+**Example:**
+```xml
+<invoke name="get-next-todo-number">
+</invoke>
+```
+
+**Possible responses:**
+- `"3"` (if Task 3 is the next incomplete task)
+- `"All todos have been completed"` (if no incomplete tasks remain)
+
+#### 11. `list-todos` - List all todos with task numbers
 Returns all todos in the database, including completed ones, with full formatting.
 
 **Parameters:** None
@@ -447,7 +460,7 @@ Returns all todos in the database, including completed ones, with full formattin
 </invoke>
 ```
 
-#### 11. `list-active-todos` - List all non-completed todos
+#### 12. `list-active-todos` - List all non-completed todos
 Returns only todos that haven't been completed, filtered by completion status.
 
 **Parameters:** None
@@ -460,7 +473,7 @@ Returns only todos that haven't been completed, filtered by completion status.
 
 ### **Search & Discovery**
 
-#### 12. `search-todos-by-title` - Search todos by title
+#### 13. `search-todos-by-title` - Search todos by title
 Performs case-insensitive partial matching on todo titles.
 
 **Parameters:**
@@ -473,7 +486,7 @@ Performs case-insensitive partial matching on todo titles.
 </invoke>
 ```
 
-#### 13. `search-todos-by-date` - Search todos by creation date
+#### 14. `search-todos-by-date` - Search todos by creation date
 Finds todos created on a specific date.
 
 **Parameters:**
@@ -486,7 +499,7 @@ Finds todos created on a specific date.
 </invoke>
 ```
 
-#### 14. `summarize-active-todos` - Generate summary of active todos
+#### 15. `summarize-active-todos` - Generate summary of active todos
 Creates a markdown-formatted summary of all incomplete todos.
 
 **Parameters:** None
@@ -554,8 +567,8 @@ When using with Claude for Desktop or Cursor, you can try:
 - "Get the next task I should work on"
 
 #### **Bulk Operations**
-- "Create tasks for all files in /path/to/my/project using this template: [your template]"
-- "Use the template file at /path/to/template.md to create tasks for /path/to/tasks folder"
+- "Create tasks for all files in /path/to/my/project - read each file's content into the task"
+- "Use bulk-add-todos to create tasks from all files in /path/to/tasks folder"
 - "Clear all todos and start fresh"
 
 #### **Workflow Examples**
@@ -563,18 +576,22 @@ When using with Claude for Desktop or Cursor, you can try:
 - "Complete task abc123-def4-5678" (marks as done, next call returns Task 2)
 - "Show me a summary of all my active work"
 
-#### **Template System**
-The bulk operations support powerful templating with auto-injection:
+#### **File Content System**
+The bulk operations automatically embed complete file contents:
 ```markdown
-Your template:
-Read the task file and complete all steps.
-Follow the instructions exactly as written.
+File content at /path/to/task.md:
+# User Authentication Task
+Implement OAuth2 integration with Google and GitHub.
+Add proper error handling and token refresh.
 
 Gets auto-expanded to:
-**Task 5**
-**Task File:** /path/to/file.md
-Read the task file and complete all steps.
-Follow the instructions exactly as written.
+**Task 5: task**
+**Source File:** /path/to/task.md
+
+# User Authentication Task
+Implement OAuth2 integration with Google and GitHub.
+Add proper error handling and token refresh.
+
 **When completed, use the complete-todo MCP tool:**
 - ID: abc123-def4-5678-9012-345678901234
 ```

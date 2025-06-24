@@ -70,9 +70,9 @@ const server = new McpServer({
  * @param errorMessage The message to include if an error occurs
  * @returns Either the operation result or an Error
  */
-async function safeExecute<T>(operation: () => T, errorMessage: string) {
+async function safeExecute<T>(operation: () => T | Promise<T>, errorMessage: string) {
   try {
-    const result = operation();
+    const result = await operation();
     return result;
   } catch (error) {
     console.error(errorMessage, error);
@@ -439,16 +439,14 @@ server.tool(
  */
 server.tool(
   "bulk-add-todos",
-  "Create multiple todos from all files in a folder with auto-injected task info. Template can be inline or from file.",
+  "Create todos by reading file contents from a folder (recursively scans all files)",
   {
     folderPath: z.string().min(1, "Folder path is required"),
-    template: z.string().optional(),
-    templateFilePath: z.string().optional(),
   },
-  async ({ folderPath, template, templateFilePath }) => {
-    const result = await safeExecute(() => {
-      const validatedData = BulkAddTodosSchema.parse({ folderPath, template, templateFilePath });
-      const createdTodos = todoService.bulkAddTodos(validatedData);
+  async ({ folderPath }) => {
+    const result = await safeExecute(async () => {
+      const validatedData = BulkAddTodosSchema.parse({ folderPath });
+      const createdTodos = await todoService.bulkAddTodos(validatedData);
       const formattedList = formatTodoList(createdTodos);
       
       return {
@@ -462,7 +460,7 @@ server.tool(
     }
 
     const { formattedList, todoCount } = result;
-    return createSuccessResponse(`✅ Created ${todoCount} todos from folder:\n\n${formattedList}`);
+    return createSuccessResponse(`✅ Created ${todoCount} todos from files in ${folderPath}:\n\n${formattedList}`);
   }
 );
 
@@ -533,7 +531,33 @@ server.tool(
 );
 
 /**
- * Tool 14: Clear all todos
+ * Tool 14: Get next todo number
+ */
+server.tool(
+  "get-next-todo-number",
+  "Get only the task number of the next incomplete todo",
+  {},
+  async () => {
+    const result = await safeExecute(() => {
+      const nextTodoNumber = todoService.getNextTodoNumber();
+      
+      if (nextTodoNumber === null) {
+        return "All todos have been completed";
+      }
+
+      return nextTodoNumber.toString();
+    }, "Failed to get next todo number");
+
+    if (result instanceof Error) {
+      return createErrorResponse(result.message);
+    }
+
+    return createSuccessResponse(result);
+  }
+);
+
+/**
+ * Tool 15: Clear all todos
  * 
  * This tool:
  * 1. Deletes all todos from the database

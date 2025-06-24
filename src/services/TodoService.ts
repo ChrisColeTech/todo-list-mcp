@@ -391,14 +391,15 @@ class TodoService {
    * 
    * This method:
    * 1. Recursively scans the provided folder for all files
-   * 2. Creates one todo per file with auto-injected task info
+   * 2. Creates one todo per file with auto-injected task info (parallel file reading)
    * 3. Auto-injects: Task number header, file path, and completion instruction with todo ID
+   * 4. Uses batch database operations for performance
    * 
    * @param data The bulk add data (folderPath and template)
    * @returns Array of created Todos
    */
-  bulkAddTodos(data: z.infer<typeof BulkAddTodosSchema>): Todo[] {
-    const { folderPath, template, templateFilePath } = data;
+  async bulkAddTodos(data: z.infer<typeof BulkAddTodosSchema>): Promise<Todo[]> {
+    const { folderPath } = data;
     
     // Check if folder exists
     if (!fs.existsSync(folderPath)) {
@@ -407,35 +408,6 @@ class TodoService {
     
     if (!fs.statSync(folderPath).isDirectory()) {
       throw new Error(`Path is not a directory: ${folderPath}`);
-    }
-    
-    // Determine the template to use
-    let finalTemplate: string;
-    if (templateFilePath) {
-      // Read template from file
-      if (!fs.existsSync(templateFilePath)) {
-        throw new Error(`Template file does not exist: ${templateFilePath}`);
-      }
-      
-      if (!fs.statSync(templateFilePath).isFile()) {
-        throw new Error(`Template path is not a file: ${templateFilePath}`);
-      }
-      
-      try {
-        finalTemplate = fs.readFileSync(templateFilePath, 'utf-8');
-      } catch (error) {
-        throw new Error(`Failed to read template file ${templateFilePath}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
-      
-      if (!finalTemplate.trim()) {
-        throw new Error(`Template file is empty: ${templateFilePath}`);
-      }
-    } else if (template) {
-      // Use provided inline template
-      finalTemplate = template;
-    } else {
-      // This shouldn't happen due to schema validation, but just in case
-      throw new Error('Either template or templateFilePath must be provided');
     }
     
     // Get all files recursively
@@ -466,55 +438,106 @@ class TodoService {
     const maxResult = maxTaskNumberStmt.get() as any;
     const startingTaskNumber = (maxResult?.maxTaskNumber || 0) + 1;
     
-    const createdTodos: Todo[] = [];
-
-    filePaths.forEach((filePath, index) => {
-      const taskNumber = startingTaskNumber + index;
-      
-      // Create todo with temporary description (will be updated after todo creation with ID)
-      const todoData = {
-        title: `Task ${taskNumber}`,
-        description: finalTemplate
-      };
-
-      const todo = createTodo(todoData, filePath, taskNumber);
-      
-      // Auto-inject task information into the description
-      const processedDescription = `**Task ${taskNumber}**
-
-**Task File:** ${filePath}
-
-${finalTemplate}
-
-**When completed, use the complete-todo MCP tool:**
-- ID: ${todo.id}`;
-
-      // Update the todo with the processed description
-      todo.description = processedDescription;
-      
-      // Save to database
-      const db = databaseService.getDb();
-      const stmt = db.prepare(`
-        INSERT INTO todos (id, title, description, completedAt, createdAt, updatedAt, filePath, status, taskNumber)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      
-      stmt.run(
-        todo.id,
-        todo.title,
-        todo.description,
-        todo.completedAt,
-        todo.createdAt,
-        todo.updatedAt,
-        todo.filePath,
-        todo.status,
-        todo.taskNumber
-      );
-
-      createdTodos.push(todo);
+    // Read all files in parallel
+    const fileReadPromises = filePaths.map(async (filePath, index) => {
+      try {
+        const fileContent = await fs.promises.readFile(filePath, 'utf-8');
+        const trimmedContent = fileContent.trim();
+        
+        if (!trimmedContent) {
+          return { filePath, content: null, error: 'Empty file' };
+        }
+        
+        return { 
+          filePath, 
+          content: trimmedContent, 
+          taskNumber: startingTaskNumber + index,
+          error: null 
+        };
+      } catch (error) {
+        return { 
+          filePath, 
+          content: null, 
+          error: error instanceof Error ? error.message : 'Unknown error' 
+        };
+      }
     });
 
-    return createdTodos;
+    console.log(`Reading ${filePaths.length} files in parallel...`);
+    const fileResults = await Promise.all(fileReadPromises);
+    
+    // Filter successful reads and track skipped files
+    const validFileResults = fileResults.filter(result => result.content !== null);
+    const skippedFiles = fileResults.filter(result => result.content === null);
+    
+    // Log skipped files
+    skippedFiles.forEach(result => {
+      console.warn(`Skipping file (${result.error}): ${result.filePath}`);
+    });
+
+    if (validFileResults.length === 0) {
+      throw new Error('No valid files to process after filtering.');
+    }
+
+    console.log(`Processing ${validFileResults.length} valid files...`);
+
+    // Prepare all todos in memory first
+    const todosToCreate = validFileResults.map(result => {
+      const fileName = path.basename(result.filePath, path.extname(result.filePath));
+      const title = `Task ${result.taskNumber}: ${fileName}`;
+      
+      const description = `**Task ${result.taskNumber}**
+**Source File:** ${result.filePath}
+
+${result.content}
+
+**When completed, use the complete-todo MCP tool:**
+- ID: [UUID will be auto-filled]`;
+
+      const todoData = { title, description };
+      const todo = createTodo(todoData, result.filePath, result.taskNumber);
+      
+      // Update description with actual UUID
+      todo.description = description.replace(
+        '- ID: [UUID will be auto-filled]',
+        `- ID: ${todo.id}`
+      );
+      
+      return todo;
+    });
+
+    // Batch insert all todos in a single transaction
+    console.log(`Inserting ${todosToCreate.length} todos in batch...`);
+    const insertStmt = db.prepare(`
+      INSERT INTO todos (id, title, description, completedAt, createdAt, updatedAt, filePath, status, taskNumber)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const transaction = db.transaction((todos: Todo[]) => {
+      for (const todo of todos) {
+        insertStmt.run(
+          todo.id,
+          todo.title,
+          todo.description,
+          todo.completedAt,
+          todo.createdAt,
+          todo.updatedAt,
+          todo.filePath,
+          todo.status,
+          todo.taskNumber
+        );
+      }
+    });
+
+    transaction(todosToCreate);
+
+    // Log processing summary
+    console.log(`Processing complete: Created ${todosToCreate.length} todos, skipped ${skippedFiles.length} files`);
+    if (skippedFiles.length > 0) {
+      console.warn(`Skipped files: ${skippedFiles.length} (binary/empty/unreadable)`);
+    }
+
+    return todosToCreate;
   }
 
   /**
@@ -559,6 +582,24 @@ ${finalTemplate}
     if (!row) return undefined;
     
     return this.rowToTodo(row);
+  }
+
+  /**
+   * Get next todo number only
+   * 
+   * @returns The task number of the next Todo that needs to be completed, null if none
+   */
+  getNextTodoNumber(): number | null {
+    const db = databaseService.getDb();
+    const stmt = db.prepare(`
+      SELECT taskNumber FROM todos 
+      WHERE status != 'Done' 
+      ORDER BY taskNumber ASC
+      LIMIT 1
+    `);
+    const row = stmt.get() as any;
+    
+    return row ? row.taskNumber : null;
   }
 
   /**
